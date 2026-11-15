@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Bosch Eyes — Authorization</title>
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-size: 14px;
+      color: var(--text-color, #333);
+      background: transparent;
+      margin: 0;
+      padding: 16px;
+    }
+
+    h2 { font-size: 16px; font-weight: 600; margin: 0 0 4px; }
+    p  { margin: 0 0 16px; color: var(--secondary-text, #666); }
+
+    .card {
+      background: var(--card-bg, #f8f9fa);
+      border: 1px solid var(--border-color, #dee2e6);
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+
+    .status-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 500;
+    }
+    .dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .dot.green  { background: #28a745; }
+    .dot.orange { background: #fd7e14; }
+    .dot.grey   { background: #adb5bd; }
+
+    .btn {
+      display: inline-block;
+      padding: 8px 16px;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      transition: opacity 0.15s;
+    }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-primary  { background: #007bff; color: #fff; }
+    .btn-primary:hover:not(:disabled) { background: #0069d9; }
+    .btn-success  { background: #28a745; color: #fff; }
+    .btn-success:hover:not(:disabled) { background: #218838; }
+    .btn-link     { background: none; color: #007bff; padding: 0; text-decoration: underline; }
+
+    .url-box {
+      background: var(--code-bg, #e9ecef);
+      border-radius: 6px;
+      padding: 10px 12px;
+      word-break: break-all;
+      font-size: 12px;
+      font-family: monospace;
+      margin: 12px 0;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: border-color 0.15s;
+    }
+    .url-box:hover { border-color: #007bff; }
+
+    .url-actions { display: flex; gap: 8px; margin-bottom: 16px; }
+
+    input[type="text"] {
+      width: 100%;
+      padding: 8px 10px;
+      border: 1px solid var(--border-color, #ced4da);
+      border-radius: 6px;
+      font-size: 14px;
+      background: var(--input-bg, #fff);
+      color: var(--text-color, #333);
+      margin-bottom: 10px;
+    }
+    input[type="text"]:focus { outline: none; border-color: #007bff; }
+
+    .alert {
+      padding: 10px 14px;
+      border-radius: 6px;
+      margin-bottom: 12px;
+      font-size: 13px;
+    }
+    .alert-success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+    .alert-danger  { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+    .alert-info    { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+
+    .steps { padding-left: 20px; margin: 0 0 16px; }
+    .steps li { margin-bottom: 6px; line-height: 1.5; }
+
+    .hidden { display: none; }
+
+    .spinner {
+      display: inline-block;
+      width: 14px; height: 14px;
+      border: 2px solid #fff;
+      border-top-color: transparent;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+      vertical-align: middle;
+      margin-right: 6px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+
+<!-- ── Authenticated state ──────────────────────────────────────────────── -->
+<div id="view-ok" class="hidden">
+  <div class="card">
+    <div class="status-row">
+      <span class="dot green"></span>
+      <span>Authorized — cameras are discovered automatically on startup.</span>
+    </div>
+  </div>
+  <p>To re-authorize (e.g. after a password change), click below to start a new login flow.</p>
+  <button class="btn btn-link" id="btn-reauth">Re-authorize</button>
+</div>
+
+<!-- ── Not authenticated: step 1 — generate URL ────────────────────────── -->
+<div id="view-start" class="hidden">
+  <div class="card">
+    <div class="status-row" style="margin-bottom:12px">
+      <span class="dot orange"></span>
+      <span>Not yet authorized</span>
+    </div>
+    <p>Click the button to generate a one-time login URL for your Bosch Smart Home account.</p>
+    <button class="btn btn-primary" id="btn-generate">Generate Login URL</button>
+  </div>
+</div>
+
+<!-- ── Step 2 — show URL and await callback ──────────────────────────────── -->
+<div id="view-url" class="hidden">
+  <div class="card">
+    <div class="status-row" style="margin-bottom:12px">
+      <span class="dot orange"></span>
+      <span>Waiting for authorization</span>
+    </div>
+
+    <ol class="steps">
+      <li>Open the URL below in your browser (click to copy, or use the button).</li>
+      <li>Log in with your Bosch Smart Home / Single Key ID account.</li>
+      <li>After login the browser redirects to <code>www.bosch.com/boschcam?code=…</code></li>
+      <li>Copy the <strong>full URL</strong> from the browser address bar and paste it below.</li>
+    </ol>
+
+    <div class="url-box" id="auth-url-text" title="Click to copy"></div>
+    <div class="url-actions">
+      <button class="btn btn-primary" id="btn-copy">Copy URL</button>
+      <button class="btn btn-primary" id="btn-open">Open in Browser</button>
+    </div>
+
+    <label style="font-weight:500;display:block;margin-bottom:6px">
+      Paste the redirect URL here:
+    </label>
+    <input type="text" id="callback-input" placeholder="https://www.bosch.com/boschcam?code=…&state=…">
+    <button class="btn btn-success" id="btn-exchange">Complete Authorization</button>
+  </div>
+</div>
+
+<!-- ── Loading / error overlays ─────────────────────────────────────────── -->
+<div id="alert-area"></div>
+
+<script>
+  const $ = id => document.getElementById(id);
+
+  let authUrl = '';
+
+  function showAlert(type, msg) {
+    $('alert-area').innerHTML =
+      `<div class="alert alert-${type}">${msg}</div>`;
+  }
+  function clearAlert() { $('alert-area').innerHTML = ''; }
+
+  function showView(name) {
+    ['view-ok', 'view-start', 'view-url'].forEach(v =>
+      $(v).classList.toggle('hidden', v !== name));
+  }
+
+  async function init() {
+    try {
+      const status = await homebridge.request('/auth/status');
+      if (status.authenticated) {
+        showView('view-ok');
+      } else if (status.hasPkce) {
+        // A verifier was already generated — go straight to URL step
+        const res = await homebridge.request('/auth/url');
+        authUrl = res.url;
+        $('auth-url-text').textContent = authUrl;
+        showView('view-url');
+      } else {
+        showView('view-start');
+      }
+    } catch (e) {
+      showAlert('danger', 'Could not reach plugin server: ' + e.message);
+    }
+  }
+
+  $('btn-generate').addEventListener('click', async () => {
+    $('btn-generate').disabled = true;
+    $('btn-generate').innerHTML = '<span class="spinner"></span>Generating…';
+    clearAlert();
+    try {
+      const res = await homebridge.request('/auth/url');
+      authUrl = res.url;
+      $('auth-url-text').textContent = authUrl;
+      showView('view-url');
+    } catch (e) {
+      showAlert('danger', 'Failed to generate URL: ' + e.message);
+      $('btn-generate').disabled = false;
+      $('btn-generate').textContent = 'Generate Login URL';
+    }
+  });
+
+  $('btn-copy').addEventListener('click', () => {
+    navigator.clipboard.writeText(authUrl).then(() => {
+      $('btn-copy').textContent = 'Copied!';
+      setTimeout(() => { $('btn-copy').textContent = 'Copy URL'; }, 1500);
+    });
+  });
+
+  $('auth-url-text').addEventListener('click', () => {
+    navigator.clipboard.writeText(authUrl);
+  });
+
+  $('btn-open').addEventListener('click', () => {
+    window.open(authUrl, '_blank');
+  });
+
+  $('btn-exchange').addEventListener('click', async () => {
+    const callbackUrl = $('callback-input').value.trim();
+    if (!callbackUrl) {
+      showAlert('info', 'Paste the redirect URL from your browser first.');
+      return;
+    }
+    clearAlert();
+    $('btn-exchange').disabled = true;
+    $('btn-exchange').innerHTML = '<span class="spinner"></span>Authorizing…';
+
+    try {
+      await homebridge.request('/auth/exchange', { callbackUrl });
+      showAlert('success', '✓ Authorization successful! Restart Homebridge to discover your cameras.');
+      showView('view-ok');
+    } catch (e) {
+      showAlert('danger', e.message);
+      $('btn-exchange').disabled = false;
+      $('btn-exchange').textContent = 'Complete Authorization';
+    }
+  });
+
+  $('btn-reauth').addEventListener('click', async () => {
+    clearAlert();
+    $('btn-generate').disabled = false;
+    $('btn-generate').textContent = 'Generate Login URL';
+    showView('view-start');
+  });
+
+  init();
+</script>
+</body>
+</html>

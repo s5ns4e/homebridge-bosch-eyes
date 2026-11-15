@@ -1,0 +1,84 @@
+{
+  "pluginAlias": "BoschEyesPlatform",
+  "pluginType": "platform",
+  "singular": true,
+  "headerDisplay": "**Step 1** — [Click here to log in with your Bosch Single Key ID](https://smarthome.authz.bosch.com/auth/realms/home_auth_provider/protocol/openid-connect/auth?client_id=oss_residential_app&response_type=code&scope=email+offline_access+profile+openid&redirect_uri=https%3A%2F%2Fwww.bosch.com%2Fboschcam&code_challenge=iKgRlRLGEjGhoPztbIEY-g6wNAP8lE2pPqEi7Q1mBbk&code_challenge_method=S256) *(opens in new tab)*  **Step 2** — After login the browser shows `www.bosch.com/boschcam?code=…` — copy the **full URL** from the address bar.  **Step 3** — Paste it into **Authorization Callback URL** below and save.",
+  "footerDisplay": "Need help? See the [README on GitHub](https://github.com/s5ns4e/homebridge-bosch-eyes#readme).",
+  "schema": {
+    "type": "object",
+    "properties": {
+      "name": {
+        "title": "Platform Name",
+        "type": "string",
+        "default": "Bosch Eyes",
+        "required": true
+      },
+      "authCallbackUrl": {
+        "title": "Authorization Callback URL",
+        "type": "string",
+        "description": "Paste the full redirect URL from your browser here (step 4 above). Leave empty on first save. Can be removed once cameras are discovered."
+      },
+      "cameras": {
+        "title": "Camera Overrides",
+        "type": "array",
+        "description": "Optional per-camera name and stream quality settings. Cameras are auto-discovered; add an entry here only to rename or tune a specific camera.",
+        "items": {
+          "title": "Camera",
+          "type": "object",
+          "properties": {
+            "apiId": {
+              "title": "Camera API ID",
+              "type": "string",
+              "description": "Bosch camera UUID. Find it in Homebridge logs after first run: look for 'Camera accessory configured (Bosch ID: ...)'."
+            },
+            "name": {
+              "title": "Display Name",
+              "type": "string",
+              "description": "Override the camera's name as shown in Apple Home."
+            },
+            "maxStreams": {
+              "title": "Max Concurrent Streams",
+              "type": "integer",
+              "default": 2,
+              "minimum": 1,
+              "maximum": 4
+            },
+            "maxWidth": {
+              "title": "Max Width (px)",
+              "type": "integer",
+              "default": 1280,
+              "minimum": 320
+            },
+            "maxHeight": {
+              "title": "Max Height (px)",
+              "type": "integer",
+              "default": 720,
+              "minimum": 240
+            },
+            "maxFPS": {
+              "title": "Max Frames Per Second",
+              "type": "integer",
+              "default": 15,
+              "minimum": 1,
+              "maximum": 30
+            }
+          },
+          "required": ["apiId"]
+        }
+      },
+      "ffmpegPath": {
+        "title": "ffmpeg Path",
+        "type": "string",
+        "placeholder": "ffmpeg",
+        "description": "Full path to the ffmpeg binary. Leave empty to use the system PATH. Example: /usr/bin/ffmpeg"
+      },
+      "debugStreaming": {
+        "title": "Enable Debug Logging",
+        "type": "boolean",
+        "default": false,
+        "description": "Log verbose ffmpeg output. Enable only for troubleshooting — it is very noisy."
+      }
+    },
+    "required": []
+  }
+}
